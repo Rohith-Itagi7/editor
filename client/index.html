@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <base href="/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Editor</title>
+    <!-- The fonts in the Text panel that a Mac does not have: Google Fonts. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&family=Inter+Tight:wght@100..900&family=Noto+Sans:wght@100..900&display=swap" />
+    <link rel="stylesheet" href="./client/ui/theme.css" />
+    <link rel="stylesheet" href="./client/canvas/canvas.css" />
+    <link rel="stylesheet" href="./client/panels/panels.css" />
+    <link rel="stylesheet" href="./client/ui/shell.css" />
+    <link rel="stylesheet" href="./client/panels/sections.css" />
+  </head>
+  <body>
+    <!-- The layout: a left panel that drags from 180 to 640px, a 42px vertical toolbar, the canvas,
+         and a 281px right panel. -->
+    <div class="editor full shell" id="editor">
+      <aside class="side left">
+        <header class="file-head">
+          <span class="file-logo" data-icon="logo"></span>
+          <b class="file-name">Untitled</b>
+          <button type="button" class="ghost" data-icon="sidebar" data-toggle-panels aria-label="Collapse UI (Shift .)"></button>
+        </header>
+        <div class="tabs" role="tablist">
+          <button type="button" role="tab" aria-selected="true">Design</button>
+          <button type="button" role="tab" aria-selected="false">Theme</button>
+        </div>
+        <section class="pages">
+          <header class="group-head"><span class="chev open" data-icon="chevronRight"></span>Pages<button type="button" class="ghost" data-icon="plus" aria-label="Add page"></button></header>
+          <div class="page-list">
+            <div class="page-row on"><span data-icon="page"></span>Page 1<span class="check" data-icon="check"></span></div>
+          </div>
+        </section>
+        <ul class="layers"></ul>
+        <footer class="side-foot">Prototype</footer>
+      </aside>
+      <div class="toolbar"></div>
+      <div class="canvas"></div>
+      <aside class="side right">
+        <header class="top-bar">
+          <span class="avatar">S</span>
+          <button type="button" class="zoom-menu" aria-label="Zoom"><span class="zoom-value">100%</span><span data-icon="zoomChevron"></span></button>
+          <button type="button" class="share">Share</button>
+        </header>
+        <div class="inspector"></div>
+      </aside>
+    </div>
+    <div class="menu" id="editor-menu" hidden></div>
+    <script type="module" src="./client/main.js"></script>
+  </body>
+</html>

@@ -1,0 +1,29 @@
+{
+  "name": "editor",
+  "private": true,
+  "license": "MIT",
+  "version": "0.0.0",
+  "type": "module",
+  "main": "desktop/main.mjs",
+  "scripts": {
+    "start": "electron .",
+    "package": "node desktop/package.mjs",
+    "package:mac": "node desktop/package.mjs mac",
+    "package:mac-intel": "node desktop/package.mjs mac-intel",
+    "package:win": "node desktop/package.mjs win",
+    "package:win-arm64": "node desktop/package.mjs win-arm64",
+    "package:linux": "node desktop/package.mjs linux",
+    "package:linux-arm64": "node desktop/package.mjs linux-arm64",
+    "package:all": "node desktop/package.mjs all",
+    "test": "node --test --test-timeout=30000 tests/*.test.mjs"
+  },
+  "devDependencies": {
+    "@electron/packager": "^20.3.0",
+    "electron": "44.0.0"
+  },
+  "productName": "Editor",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "ws": "^8.22.1"
+  }
+}

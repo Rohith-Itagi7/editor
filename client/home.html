@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <base href="/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Files</title>
+    <style>
+      :root { color-scheme: light dark; --ink: light-dark(#1a1a1a, #f0f0f0); --ink-2: light-dark(#777, #9a9a9a); --bg: light-dark(#eeeeee, #282828); --card: light-dark(#fff, #333); --line: light-dark(#0001, #fff2); }
+      body { margin: 0; background: var(--bg); color: var(--ink); font: 13px/18px -apple-system, BlinkMacSystemFont, system-ui, sans-serif; }
+      main { max-width: 720px; margin: 0 auto; padding: 48px 24px; }
+      header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+      h1 { margin: 0; font-size: 20px; font-weight: 600; }
+      .actions { display: flex; gap: 8px; }
+      button { height: 28px; padding: 0 12px; border: 0; border-radius: 6px; background: var(--card); color: var(--ink); font: inherit; font-weight: 500; box-shadow: 0 0 0 1px var(--line); cursor: pointer; }
+      button.primary { background: var(--ink); color: var(--bg); box-shadow: none; }
+      ul { margin: 0; padding: 0; list-style: none; border-radius: 12px; background: var(--card); box-shadow: 0 0 0 1px var(--line); overflow: hidden; }
+      li { display: flex; align-items: center; gap: 12px; padding: 0 16px; height: 48px; border-top: 1px solid var(--line); cursor: pointer; }
+      li:first-child { border-top: 0; }
+      li:hover { background: light-dark(#0000000a, #ffffff0d); }
+      .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
+      .meta { color: var(--ink-2); }
+      li button { height: 24px; padding: 0 8px; opacity: 0; }
+      li:hover button, li button:focus-visible { opacity: 1; }
+      #signin { display: grid; gap: 12px; max-width: 320px; margin: 24px auto; padding: 24px; border-radius: 12px; background: var(--card); box-shadow: 0 0 0 1px var(--line); }
+      #signin[hidden], #name-field[hidden] { display: none; }
+      #signin h2 { margin: 0; font-size: 16px; }
+      #signin label { display: grid; gap: 4px; font-weight: 500; }
+      #signin input { height: 28px; padding: 0 8px; border: 0; border-radius: 6px; background: light-dark(#f4f4f4, #3d3d3d); color: var(--ink); font: inherit; }
+      button.link { background: none; box-shadow: none; color: var(--ink-2); }
+      .who { color: var(--ink-2); margin-right: 8px; align-self: center; }
+      #status { margin: 12px 0 0; min-height: 18px; color: var(--ink-2); }
+      #status[data-error] { color: #d33; }
+      .empty { padding: 32px; text-align: center; color: var(--ink-2); cursor: default; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>Files</h1>
+        <div class="actions">
+          <button type="button" id="open">Open file…</button>
+          <button type="button" id="new" class="primary">New file</button>
+        </div>
+      </header>
+      <form id="signin" hidden>
+        <h2 id="signin-title">Sign in</h2>
+        <label id="name-field" hidden>Name<input name="name" autocomplete="name"></label>
+        <label>Email<input name="email" type="email" autocomplete="email" required></label>
+        <label>Password<input name="password" type="password" autocomplete="current-password" required minlength="8"></label>
+        <button type="submit" class="primary" id="signin-submit">Sign in</button>
+        <button type="button" id="switch" class="link">Make an account</button>
+      </form>
+      <ul id="list"></ul>
+      <p id="status" role="status"></p>
+      <input type="file" id="picker" accept=".json,application/json" hidden />
+    </main>
+    <script type="module">
+      const list = document.getElementById("list");
+      const status = document.getElementById("status");
+      const say = (text, error = false) => { status.textContent = text; status.toggleAttribute("data-error", error); };
+      const call = async (url, options) => {
+        const response = await fetch(url, options).catch(() => Promise.reject(new Error("The editor's server is not running.")));
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.error ?? `Request failed (${response.status})`);
+        return data;
+      };
+      const ago = (time) => {
+        if (!time) return "";
+        const minutes = Math.round((time - Date.now()) / 60000);
+        const rtf = new Intl.RelativeTimeFormat("en", { numeric: "auto" });
+        if (Math.abs(minutes) < 60) return `Edited ${rtf.format(minutes, "minute")}`;
+        if (Math.abs(minutes) < 60 * 24) return `Edited ${rtf.format(Math.round(minutes / 60), "hour")}`;
+        return `Edited ${rtf.format(Math.round(minutes / 60 / 24), "day")}`;
+      };
+
+      // Sign-in is on only when the server was started with it; then the page asks for an account first.
+      let me = { auth: false, user: null };
+      const actions = document.querySelector(".actions");
+      const form = document.getElementById("signin");
+      let signingUp = false;
+      function paintAccount() {
+        form.hidden = !(me.auth && !me.user);
+        document.getElementById("list").hidden = me.auth && !me.user;
+        for (const b of actions.querySelectorAll("button")) b.hidden = me.auth && !me.user;
+        actions.querySelector(".who")?.remove();
+        actions.querySelector("#signout")?.remove();
+        if (me.user) {
+          actions.prepend(Object.assign(document.createElement("span"), { className: "who", textContent: me.user.name }));
+          const out = Object.assign(document.createElement("button"), { type: "button", id: "signout", textContent: "Sign out" });
+          out.addEventListener("click", async () => { try { await call("/api/auth/signout", { method: "POST" }); me = { auth: true, user: null }; paintAccount(); } catch (error) { say(error.message, true); } });
+          actions.prepend(out);
+        }
+      }
+      document.getElementById("switch").addEventListener("click", () => {
+        signingUp = !signingUp;
+        document.getElementById("signin-title").textContent = signingUp ? "Make an account" : "Sign in";
+        document.getElementById("signin-submit").textContent = signingUp ? "Make an account" : "Sign in";
+        document.getElementById("switch").textContent = signingUp ? "I have an account" : "Make an account";
+        document.getElementById("name-field").hidden = !signingUp;
+        form.elements.password.autocomplete = signingUp ? "new-password" : "current-password";
+      });
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        try {
+          const data = Object.fromEntries(new FormData(form));
+          me = { auth: true, ...(await call(`/api/auth/${signingUp ? "signup" : "signin"}`, { method: "POST", body: JSON.stringify(data) })) };
+          form.reset();
+          say("");
+          paintAccount();
+          render();
+        } catch (error) { say(error.message, true); }
+      });
+
+      async function render() {
+        if (me.auth && !me.user) return;
+        try {
+          const files = await call("/api/files");
+          list.replaceChildren(...(files.length ? files.map(row) : [Object.assign(document.createElement("li"), { className: "empty", textContent: "No files yet. Make one with New file." })]));
+        } catch (error) {
+          say(error.message, true);
+        }
+      }
+      function row(file) {
+        const li = document.createElement("li");
+        li.innerHTML = `<span class="name"></span><span class="meta"></span><button type="button" data-do="download">Download</button><button type="button" data-do="delete">Delete</button>`;
+        li.querySelector(".name").textContent = file.name;
+        li.querySelector(".meta").textContent = [file.access === "link" ? "Shared" : "", ago(file.updatedAt)].filter(Boolean).join(" · ");
+        li.addEventListener("click", (event) => { if (!event.target.closest("button")) location.href = `/file/${file.id}`; });
+        // A file saved to disk is the file's JSON: { name, pages, tokens, nodes }; Open file brings it back.
+        li.querySelector('[data-do="download"]').addEventListener("click", async () => {
+          try {
+            const { name, pages, tokens, threads, nodes } = await call(`/api/files/${file.id}`);
+            const link = Object.assign(document.createElement("a"), { href: URL.createObjectURL(new Blob([JSON.stringify({ name, pages, tokens: tokens ?? [], threads: threads ?? [], nodes })], { type: "application/json" })), download: `${name}.json` });
+            link.click();
+            URL.revokeObjectURL(link.href);
+          } catch (error) { say(error.message, true); }
+        });
+        li.querySelector('[data-do="delete"]').addEventListener("click", async () => {
+          if (!confirm(`Delete "${file.name}"? This cannot be undone.`)) return;
+          try { await call(`/api/files/${file.id}`, { method: "DELETE" }); say(`Deleted "${file.name}".`); render(); } catch (error) { say(error.message, true); }
+        });
+        return li;
+      }
+
+      document.getElementById("new").addEventListener("click", async () => {
+        try { location.href = `/file/${(await call("/api/files", { method: "POST" })).id}`; } catch (error) { say(error.message, true); }
+      });
+      const picker = document.getElementById("picker");
+      document.getElementById("open").addEventListener("click", () => picker.click());
+      // A file saved from the editor: { name, pages, tokens, nodes }. It becomes a new file here.
+      picker.addEventListener("change", async () => {
+        const [chosen] = picker.files;
+        picker.value = "";
+        if (!chosen) return;
+        try {
+          const data = JSON.parse(await chosen.text());
+          if (!Array.isArray(data.nodes)) throw new Error(`"${chosen.name}" is not a file saved from this editor.`);
+          const patch = { nodes: data.nodes, name: data.name ?? chosen.name.replace(/\.json$/i, "") };
+          if (Array.isArray(data.pages)) patch.pages = data.pages;
+          if (Array.isArray(data.tokens)) patch.tokens = data.tokens;
+          if (Array.isArray(data.threads)) patch.threads = data.threads;
+          location.href = `/file/${(await call("/api/files", { method: "POST", body: JSON.stringify(patch) })).id}`;
+        } catch (error) {
+          say(error instanceof SyntaxError ? `"${chosen.name}" is not a JSON file.` : error.message, true);
+        }
+      });
+      try { me = await call("/api/auth/me"); } catch (error) { say(error.message, true); }
+      paintAccount();
+      render();
+    </script>
+  </body>
+</html>

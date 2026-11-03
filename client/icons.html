@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Icons in use</title>
+<style>
+:root{--bg:#262626;--tile:#303030;--ink:#f1f1f1;--ink2:#9a9a9a;--line:#3a3a3a}
+:root.light{--bg:#f6f5f2;--tile:#fff;--ink:#1a1a18;--ink2:#6b6a64;--line:#e4e2dc}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.4 -apple-system,system-ui,sans-serif;padding:32px 32px 80px}
+header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+h1{font-size:22px;font-weight:500;margin:0}
+button{font:inherit;color:var(--ink);background:var(--tile);border:1px solid var(--line);border-radius:8px;padding:6px 12px;cursor:pointer}
+p.lead{color:var(--ink2);margin:0 0 28px}
+h2{font-size:16px;font-weight:500;margin:32px 0 12px}
+h2 small{color:var(--ink2);font-weight:400;margin-left:8px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.tile{background:var(--tile);border:1px solid var(--line);border-radius:10px;padding:16px 12px 12px;text-align:center}
+.pair{height:56px;display:flex;align-items:center;justify-content:center;gap:18px;color:var(--ink)}
+.s32 svg{width:32px;height:32px}.s16 svg{width:16px;height:16px}.pair svg{display:block}
+.pair img{max-width:48px}
+.n{margin-top:10px;font-size:13px;font-weight:500;word-break:break-word}
+.m{font-size:11px;color:var(--ink2);margin-top:2px;word-break:break-word}
+.m.ok{color:#4caf7d}.m.bad{color:#e0a040}
+</style>
+</head>
+<body>
+<header><h1>Icons in use</h1><button id="theme">Light / dark</button></header>
+<p class="lead" id="lead"></p>
+<main id="main"></main>
+<script type="module">
+// Read straight from the project's own files, so this page is never out of step with the editor. Reload to refresh.
+import { ICONS } from "/client/ui/icons/toolbar.js";
+import { PANEL_ICONS } from "/client/ui/icons/panel.js";
+import { CONTROL_ICONS, TEXT_ICONS, MISC_ICONS } from "/client/ui/icons/inline.js";
+
+const CURSORS = ["resize-col", "resize-row", "resize-x", "scrubbing"];
+
+// The house rules, also written at the top of each icon file.
+const RULES = { toolbar: { box: "0 0 24 24", stroke: "1.5", live: 20 }, panel: { box: "0 0 16 16", stroke: "1.25", live: 14 } };
+const attr = (tag, name) => tag.match(new RegExp(`\\s${name}="([^"]*)"`))?.[1];
+const broken = (svg, rule) => {
+  const root = svg.match(/<svg[^>]*>/)[0];
+  const found = [];
+  if (attr(root, "viewBox") !== rule.box) found.push(`viewBox ${attr(root, "viewBox")}`);
+  if (attr(root, "fill") !== "none") found.push("filled shapes");
+  if (attr(root, "stroke-width") !== rule.stroke) found.push(`stroke ${attr(root, "stroke-width") ?? "default"}`);
+  if (attr(root, "stroke-linecap") !== "round" || attr(root, "stroke-linejoin") !== "round") found.push("not round");
+  return found;
+};
+let followRules = 0, ruled = 0;
+const tile = (name, svg, set) => {
+  const found = set ? broken(svg, RULES[set]) : null;
+  if (set) { ruled++; if (!found.length) followRules++; }
+  const note = !set ? "" : found.length ? `<div class="m bad">${found.join(" · ")}</div>` : `<div class="m ok">follows the rules</div>`;
+  return `<div class="tile"${set ? ` data-set="${set}"` : ""}><div class="pair"><span class="s32">${svg}</span><span class="s16">${svg}</span></div><div class="n">${name}</div>${note || `<div class="m">viewBox ${attr(svg.match(/<svg[^>]*>/)[0], "viewBox") ?? "none"}</div>`}</div>`;
+};
+const section = (title, source, tiles) => `<section><h2>${title}<small>${source}</small></h2><div class="grid">${tiles}</div></section>`;
+const cursors = CURSORS.map((c) => `<div class="tile"><div class="pair"><img src="/client/ui/cursors/${c}.webp" alt="${c}"></div><div class="n">${c}.webp</div></div>`).join("");
+
+const main =
+  section("Toolbar", "client/ui/icons/toolbar.js · rules: 24 grid, stroke 1.5, round", Object.entries(ICONS).map(([k, v]) => tile(k, v, "toolbar")).join("")) +
+  section("Panel", "client/ui/icons/panel.js · rules: 16 grid, stroke 1.25, round", Object.entries(PANEL_ICONS).map(([k, v]) => tile(k, v, "panel")).join("")) +
+  section("Controls", "client/ui/icons/inline.js · CONTROL_ICONS", Object.entries(CONTROL_ICONS).map(([k, v]) => tile(k, v, "panel")).join("")) +
+  section("Text and fill", "client/ui/icons/inline.js · TEXT_ICONS", Object.entries(TEXT_ICONS).map(([k, v]) => tile(k, v, "panel")).join("")) +
+  section("Other", "client/ui/icons/inline.js · MISC_ICONS", Object.entries(MISC_ICONS).map(([k, v]) => tile(k, v, "panel")).join("")) +
+  section("Cursors", "client/ui/cursors", cursors);
+document.getElementById("main").innerHTML = main;
+
+// Live area: the drawing plus its stroke is centered and its longest side is the same in every icon.
+for (const t of document.querySelectorAll(".tile[data-set]")) {
+  const rule = RULES[t.dataset.set];
+  const box = t.querySelector(".s32 svg").getBBox();
+  const stroked = [...t.querySelectorAll(".s32 svg path, .s32 svg rect, .s32 svg circle, .s32 svg line")].some((el) => getComputedStyle(el).stroke !== "none");
+  const side = Math.max(box.width, box.height) + (stroked ? Number(rule.stroke) : 0);
+  const off = Math.abs(side - rule.live) > 1 || Math.abs(box.x + box.width / 2 - parseFloat(rule.box.split(" ")[2]) / 2) > 0.75 || Math.abs(box.y + box.height / 2 - parseFloat(rule.box.split(" ")[3]) / 2) > 0.75;
+  const SOLID_BY_DESIGN = ["alignTop", "alignMiddle", "alignBottom"];
+  const filled = !SOLID_BY_DESIGN.includes(t.querySelector(".n").textContent) && [...t.querySelectorAll(".s32 svg path, .s32 svg rect, .s32 svg circle")].some((el) => getComputedStyle(el).fill !== "none" && getComputedStyle(el).fillOpacity !== "0");
+  if (!off && !filled) continue;
+  const note = t.querySelector(".m");
+  if (note.classList.contains("ok")) { followRules--; note.classList.replace("ok", "bad"); note.textContent = ""; }
+  if (off) note.textContent += `${note.textContent ? " · " : ""}drawing ${side.toFixed(1)} of ${rule.live}`;
+  if (filled) note.textContent += `${note.textContent ? " · " : ""}filled shapes`;
+}
+document.getElementById("lead").textContent = `${followRules} of ${ruled} icons follow the house rules. Also ${CURSORS.length} cursors. Each icon at 32px and 16px.`;
+
+document.getElementById("theme").onclick = () => document.documentElement.classList.toggle("light");
+</script>
+</body>
+</html>

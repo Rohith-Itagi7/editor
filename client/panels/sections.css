@@ -1,0 +1,115 @@
+/* Fill, Text, Underline and the paint sections, (281px panel, 256px
+   of fields, 24px ghost buttons hanging 4px past the right edge), and the popups that open
+   beside the panel (Formatting, Fonts, Styles, Underline, Colors). */
+
+/* ---------- Rows ---------- */
+
+/* A field, then actions on the right: Fill's color row is 208px of field and two 24px buttons. */
+.sec-line { display: flex; align-items: center; min-height: 24px; }
+.sec-line > .field-root { flex: 1 1 auto; }
+.sec-line > .field-root[style*="flex"] { flex-grow: 0; }
+.sec-line > .field-root + .field-root { margin-left: 8px; }
+.sec-line > .field-root + .icon-button-ghost, .sec-line > .toggle-group-root + .icon-button-ghost { margin-left: 4px; }
+.sec-line > .icon-button-ghost { margin: 0; }
+.sec-line > .icon-button-ghost:last-child, .sec-line > .sec-color-count:last-child { margin-right: -4px; }
+.sec-line > .toggle-group-root { flex: 0 0 auto; margin-inline: 0; }
+.sec-line > .field-root + .toggle-group-root { margin-left: 8px; }
+.sec-grow { flex: 1 1 auto; }
+.truncate { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Menu fields (font family, font style) and native selects dressed as fields. */
+.sec-menu-field > button.field-control { display: flex; align-items: center; padding: 0 20px 0 24px; cursor: default; }
+.sec-menu-field > button.field-control:hover { box-shadow: var(--shadow-control), inset 0 0 0 1px light-dark(#0000000d, #ffffff10); }
+.sec-select > select.field-control { appearance: none; -webkit-appearance: none; padding-right: 20px; cursor: default; }
+.sec-select > .field-caret { pointer-events: none; }
+.sec-select > .field-icon { cursor: default; }
+
+/* Text: the two alignment groups share the row, 131px and 119px. */
+.sec-aligns { display: flex; gap: 7px; }
+.sec-aligns > .toggle-group-root:first-child { flex: 0 0 131px; }
+.sec-aligns > .toggle-group-root:last-child { flex: 0 0 119px; }
+
+/* Empty sections show only the gray title and its +. */
+.shell .ins .section[data-empty] .section-body { display: none; }
+.shell .ins .section[data-empty] .section-title .icon-button-ghost { color: var(--ink-3); }
+
+.sec-mixed { width: 100%; height: 24px; border: 1px dashed var(--color-separator); border-radius: var(--radius-control); background: none; color: var(--ink-3); font: inherit; cursor: default; }
+.sec-mixed:hover { color: var(--ink-1); }
+
+/* ---------- Fill ---------- */
+
+.sec-fill { display: flex; flex-direction: column; gap: 8px; }
+.sec-fill + .sec-fill { padding-top: 8px; border-top: 1px dashed var(--color-separator); }
+.sec-fill[data-hidden] > :not(:first-child) { opacity: 0.5; }
+
+/* The type tabs: a filled chip for solid, a shaded one for gradient, a picture for image. */
+.sec-type { display: block; width: 18px; height: 12px; border-radius: 2.5px; outline: 1px solid color-mix(in oklab, currentcolor 35%, transparent); outline-offset: -1px; }
+.sec-type-solid { background: color-mix(in oklab, currentcolor 22%, transparent); }
+.sec-type-gradient { background: linear-gradient(color-mix(in oklab, currentcolor 4%, transparent), color-mix(in oklab, currentcolor 30%, transparent)); }
+/* The picture's frame is filled from CSS (fill-current/4), so its SVG leaves it unset. */
+.toggle-group-item[aria-label="Image"] svg { fill: color-mix(in oklab, currentcolor 4%, transparent); }
+.toggle-group-item[aria-label="Image"][data-pressed] svg { fill: color-mix(in oklab, currentcolor 6%, transparent); }
+
+/* Gradient: the stop bar, the type row, then a color row per stop. */
+.sec-grad-bar { position: relative; height: 18px; margin: 4px 0 10px; border-radius: 4px; background: var(--grad), repeating-conic-gradient(#ddd 0 25%, #fff 0 50%) 0 0 / 8px 8px; box-shadow: inset 0 0 0 1px #0000001a; cursor: copy; touch-action: none; }
+.sec-grad-stop { position: absolute; top: 12px; width: 12px; height: 14px; margin-left: -6px; padding: 0; border: 0; border-radius: 3px; background: linear-gradient(var(--c), var(--c)), #fff; box-shadow: 0 0 0 2px #fff, 0 0 0 3px #00000026, 0 1px 3px #00000033; cursor: ew-resize; touch-action: none; }
+.sec-grad-stop::before { content: ""; position: absolute; left: 3px; top: -5px; border: 3px solid transparent; border-bottom-color: #fff; }
+.sec-grad-stop[aria-pressed="true"] { box-shadow: 0 0 0 2px #fff, 0 0 0 3.5px var(--color-focus), 0 1px 3px #00000033; z-index: 1; }
+.sec-grad-icon::after { content: ""; width: 16px; height: 16px; border-radius: 4px; background: var(--grad); box-shadow: inset 0 0 0 1px #0000001a; }
+.sec-stop-picked .field-root { box-shadow: 0 0 0 1px var(--color-focus); border-radius: var(--radius-control); }
+
+/* Image: a thumbnail, its name and size, and how it fills. */
+.sec-image { display: flex; align-items: center; gap: 8px; height: 32px; }
+.sec-image-thumb { flex: none; width: 32px; height: 32px; padding: 0; border: 0; border-radius: 4px; background: center / cover no-repeat, repeating-conic-gradient(#ddd 0 25%, #fff 0 50%) 0 0 / 8px 8px; box-shadow: inset 0 0 0 1px #0000001a; cursor: default; }
+.sec-image-text { display: flex; flex: 1; flex-direction: column; min-width: 0; line-height: 15px; }
+.sec-image-dims { color: var(--ink-3); }
+.sec-image-size { flex: none; height: 24px; padding: 0 6px; border: 0; border-radius: var(--radius-control); background: var(--color-control); box-shadow: var(--shadow-control); color: inherit; font: inherit; }
+
+/* Shadows: three numbers, spread with the row's actions, then the color. */
+.sec-shadow { display: flex; flex-direction: column; gap: 8px; }
+.sec-shadow + .sec-shadow { padding-top: 8px; border-top: 1px dashed var(--color-separator); }
+
+/* Selection colors: the count of layers using a color, which selects them. */
+.sec-color-count { display: flex; flex: none; align-items: center; gap: 4px; height: 24px; margin-left: 4px; padding: 0 4px; border: 0; border-radius: var(--radius-control); background: none; color: var(--ink-2); font: inherit; font-variant-numeric: tabular-nums; cursor: default; }
+.sec-color-count:hover { background: var(--color-ghost-hover); color: var(--ink-1); }
+
+/* ---------- Popups ---------- */
+
+.sec-popup {
+  position: fixed; z-index: 900; display: flex; flex-direction: column; max-height: 408px;
+  border-radius: 10px; background: var(--color-panel); color: var(--ink-1); overflow: hidden;
+  font: 400 12px/16px var(--font-ui);
+  box-shadow: 0 0 0 1px light-dark(#0000001a, #444), 0 2px 4px -2px #0000001f, 0 12px 24px -8px #00000033;
+}
+.sec-popup-header { display: flex; flex: none; height: 24px; background: light-dark(#ddd, #1b1b1b); }
+.sec-popup-tab { display: flex; align-items: center; padding: 0 10px; border-radius: 0 8px 0 0; background: var(--color-panel); font-weight: 500; }
+.popup-header-button { display: flex; justify-content: center; align-items: center; width: 24px; height: 24px; padding: 0; border: 0; background: none; color: var(--ink-2); cursor: default; }
+.popup-header-button:hover { color: var(--ink-1); }
+.sec-popup-body { display: flex; flex-direction: column; padding: 8px 8px 4px; overflow: auto; }
+.sec-popup-row { display: flex; justify-content: space-between; align-items: center; min-height: 32px; }
+.sec-popup-row > label { color: var(--ink-2); }
+.sec-popup-row > .toggle-group-root { flex: 0 0 auto; margin: 0; }
+.sec-popup-row > .field-root { flex: 0 0 auto; }
+.sec-popup-note { margin: 0 0 8px; color: var(--ink-3); }
+.sec-popup-action { height: 24px; padding: 0 8px; border: 0; border-radius: var(--radius-control); background: var(--color-control); box-shadow: var(--shadow-control); color: var(--ink-1); font: inherit; cursor: default; }
+.sec-popup-action:hover { background: var(--color-ghost-hover); }
+
+/* The Formatting preview: a gray card with Lorem ipsum in the text's case. */
+.sec-preview { display: flex; align-items: center; justify-content: center; height: 120px; margin-bottom: 8px; padding: 0 16px; border-radius: 4px; background: var(--color-panel-highlight-1); color: var(--ink-4); font-size: 18px; line-height: normal; opacity: 0.8; }
+
+/* Fonts and Styles: a search, then a list drawn in each font. */
+.sec-search-wrap { padding: 0 0 6px; }
+.sec-search { width: 100%; height: 24px; padding: 0 8px 0 24px; border: 0; border-radius: var(--radius-control); outline: 0; background: var(--color-control) no-repeat 7px 50% / 11px 11px; box-shadow: var(--shadow-control); color: inherit; font: inherit;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='%23999'><circle cx='5' cy='5' r='4'/><path d='m8 8 3 3'/></svg>"); }
+.sec-search:focus-visible { outline: 2px solid var(--color-focus); outline-offset: -1px; }
+.sec-list { display: flex; flex-direction: column; margin: 0 -8px; overflow: auto; }
+.sec-list-item { display: flex; align-items: center; min-height: 32px; padding: 0 12px; font-size: 14px; cursor: default; }
+.sec-list-item:hover { background: var(--color-ghost-hover); }
+.sec-list-item[aria-selected="true"] { background: light-dark(#e6e6e6, #3a3a3a); }
+.sec-list-footer { margin: 6px -8px -4px; padding: 10px 12px; border: 0; border-top: 1px solid var(--color-separator); background: none; color: var(--ink-3); font: inherit; text-align: center; cursor: default; }
+.sec-list-footer:hover { color: var(--ink-1); }
+
+/* Colors in the file, standing in for color tokens. */
+.sec-tokens { display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; padding-bottom: 4px; }
+.sec-token { aspect-ratio: 1; padding: 0; border: 0; border-radius: 4px; background: linear-gradient(var(--c), var(--c)), repeating-conic-gradient(#ddd 0 25%, #fff 0 50%) 0 0 / 8px 8px; box-shadow: inset 0 0 0 1px #0000001a; cursor: default; }
+.sec-token:hover { box-shadow: inset 0 0 0 1px #0000001a, 0 0 0 2px var(--color-focus); }

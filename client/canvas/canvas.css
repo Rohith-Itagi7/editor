@@ -1,0 +1,86 @@
+/* The editor frame, toolbar, canvas, overlay and menu. The panels are in panels.css. */
+
+.editor {
+  direction: ltr;
+  display: grid;
+  grid-template-columns: 232px 1fr 272px;
+  grid-template-rows: 44px 640px;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--color-separator);
+  margin-top: 16px;
+  font-size: 12px;
+  user-select: none;
+}
+
+/* On its own page, the editor fills the window. */
+.editor.full { height: 100vh; grid-template-rows: 44px minmax(0, 1fr); margin: 0; border: 0; border-radius: 0; }
+
+/* Toolbar */
+.toolbar { grid-column: 1 / -1; display: flex; align-items: center; justify-content: center; gap: 2px; background: var(--color-panel); border-bottom: 1px solid var(--color-separator); }
+.toolbar-divider { width: 1px; height: 18px; margin: 0 6px; background: var(--color-separator); }
+.tool { display: grid; place-items: center; width: 32px; height: 32px; border: 0; border-radius: var(--radius-6); background: transparent; color: var(--color-tool); cursor: pointer; }
+.tool .icon { width: 20px; height: 20px; }
+.tool:hover:not(:disabled) { background: var(--color-ghost-hover); }
+.tool:disabled { color: var(--color-tool-disabled); cursor: default; }
+.tool[aria-pressed="true"] { background: var(--color-blue); color: #fff; }
+
+/* Canvas */
+.canvas {
+  position: relative;
+  overflow: hidden;
+  background-color: var(--canvas);
+  cursor: default;
+  touch-action: none;
+}
+.canvas[data-tool="Frame"], .canvas[data-tool="Rectangle"], .canvas[data-tool="Text"] { cursor: crosshair; }
+.canvas[data-tool="Pan"], .canvas.space { cursor: grab; }
+.canvas.panning { cursor: grabbing; }
+.world { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+.artboard { position: absolute; line-height: normal; box-shadow: 0 0 0 1px #0000000d, 0 1px 3px #0000001f; }
+.artboard [data-component="Text"] { white-space: pre-wrap; }
+
+/* Overlay: in screen space, above the world */
+.overlay { position: absolute; inset: 0; pointer-events: none; }
+/* The HUD colors: one blue for selection and the size badge, a lighter one
+   for hover, and frame labels in a gray that turns blue when the frame is hovered or selected. */
+.canvas {
+  --hud-selection: oklch(0.67 0.17 258);
+  --hud-hover: oklch(0.7 0.15 258);
+  --hud-label: light-dark(oklch(0.62 0 0), oklch(0.72 0 0));
+  --hud-label-on: light-dark(oklch(0.59 0.17 258), oklch(0.82 0.098 258));
+}
+.board-label { position: absolute; transform: translateY(-100%); font: 12px/1 -apple-system, BlinkMacSystemFont, system-ui, sans-serif; color: var(--hud-label); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: auto; cursor: default; }
+.board-label.on, .board-label:hover { color: var(--hud-label-on); }
+.hover-box { position: absolute; outline: 1px solid var(--hud-hover); }
+.sel-box { position: absolute; outline: 1px solid var(--hud-selection); }
+.sel-frame { position: absolute; outline: 1px solid var(--hud-selection); }
+/* Corners are 7px white squares; the edges resize too but draw nothing. */
+.sel-frame i { position: absolute; pointer-events: auto; }
+.sel-frame .h-nw, .sel-frame .h-ne, .sel-frame .h-se, .sel-frame .h-sw { z-index: 1; width: 7px; height: 7px; margin: -3.5px 0 0 -3.5px; box-sizing: border-box; background: #fff; border: 1px solid var(--hud-selection); }
+.sel-frame .h-n, .sel-frame .h-s { left: 0; width: 100%; height: 8px; margin-top: -4px; cursor: ns-resize; }
+.sel-frame .h-e, .sel-frame .h-w { top: 0; height: 100%; width: 8px; margin-left: -4px; cursor: ew-resize; }
+.sel-frame .h-nw { left: 0; top: 0; cursor: nwse-resize; }
+.sel-frame .h-ne { left: 100%; top: 0; cursor: nesw-resize; }
+.sel-frame .h-se { left: 100%; top: 100%; cursor: nwse-resize; }
+.sel-frame .h-sw { left: 0; top: 100%; cursor: nesw-resize; }
+.sel-frame .h-n { top: 0; }
+.sel-frame .h-s { top: 100%; }
+.sel-frame .h-e { left: 100%; }
+.sel-frame .h-w { left: 0; }
+.sel-size { position: absolute; transform: translateX(-50%); height: 20px; padding: 0 6px; border-radius: 3px; background: var(--hud-selection); color: #fff; font: 11px/20px ui-monospace, "SF Mono", monospace; white-space: nowrap; }
+.guide { position: absolute; background: #ff3b6b; }
+.marquee { position: absolute; background: color-mix(in oklab, var(--color-blue) 10%, transparent); outline: 1px solid var(--color-blue); }
+.drop-line { position: absolute; background: var(--color-blue); border-radius: 1px; }
+.measure-box { position: absolute; outline: 1px dashed #ff3b6b; }
+.measure { position: absolute; background: #ff3b6b; }
+.measure-label { position: absolute; transform: translate(-50%, -50%); padding: 0 4px; border-radius: 3px; background: #ff3b6b; color: #fff; font: 10px ui-monospace, monospace; }
+
+/* Canvas menu */
+.menu { position: fixed; z-index: 10; min-width: 220px; padding: 4px; border-radius: var(--radius-8); background: var(--color-panel); box-shadow: 0 0 0 1px var(--color-separator), 0 8px 24px #0003; direction: ltr; font-size: 12px; }
+.menu button { display: flex; justify-content: space-between; gap: 24px; width: 100%; height: 26px; padding: 0 8px; border: 0; border-radius: var(--radius-4); background: transparent; color: inherit; font: inherit; cursor: pointer; text-align: left; }
+.menu button:hover:not(:disabled) { background: var(--color-blue); color: #fff; }
+.menu button:disabled { opacity: 0.4; cursor: default; }
+.menu kbd { font: 10px ui-monospace, monospace; opacity: 0.6; }
+.menu hr { border: 0; border-top: 1px solid var(--color-separator); margin: 4px 0; }
+.note { margin-top: 8px; font-size: 13px; color: var(--color-gray-2); }

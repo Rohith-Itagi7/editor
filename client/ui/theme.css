@@ -1,0 +1,65 @@
+/* The editor's colors, shadows and radii, light and dark: every other stylesheet reads these.
+   Surfaces are one neutral (a trace of chroma at --tint-hue) at set lightness steps, so panel,
+   hover, selection, separator and field always keep the same distance from each other in both
+   schemes. Text is the same neutral at falling opacity, so it reads on any surface beneath it.
+   The accent is one blue; focus and selection are lighter forms of it. */
+
+:root {
+  color-scheme: light dark;
+
+  /* The tint every surface and text color shares: 0 chroma is pure gray, hue 75 leans warm. */
+  --tint-hue: 75;
+  --tint-chroma: 0.004;
+
+  /* Surfaces, darkest step last in light and first in dark. */
+  --page: light-dark(#fff, oklch(17.5% var(--tint-chroma) var(--tint-hue)));
+  --canvas: light-dark(oklch(93.8% var(--tint-chroma) var(--tint-hue)), oklch(21% var(--tint-chroma) var(--tint-hue)));
+  --color-panel: light-dark(oklch(96.6% var(--tint-chroma) var(--tint-hue)), oklch(25.6% var(--tint-chroma) var(--tint-hue)));
+  --color-panel-highlight-1: light-dark(oklch(94.1% var(--tint-chroma) var(--tint-hue)), oklch(29% var(--tint-chroma) var(--tint-hue)));
+  --color-panel-highlight-2: light-dark(oklch(90.6% var(--tint-chroma) var(--tint-hue)), oklch(32.4% var(--tint-chroma) var(--tint-hue)));
+  --color-separator: light-dark(oklch(91.6% var(--tint-chroma) var(--tint-hue)), oklch(30.6% var(--tint-chroma) var(--tint-hue)));
+  --color-control: light-dark(oklch(98.9% var(--tint-chroma) var(--tint-hue)), oklch(31.6% var(--tint-chroma) var(--tint-hue)));
+  --color-control-hover: light-dark(#fff, oklch(34.4% var(--tint-chroma) var(--tint-hue)));
+  --color-control-border: light-dark(oklch(91.6% var(--tint-chroma) var(--tint-hue)), transparent);
+  --field: var(--color-control);
+  --row-selected: var(--color-panel-highlight-2);
+
+  /* Text and icons. */
+  --ink-1: light-dark(oklch(16% var(--tint-chroma) var(--tint-hue) / 0.86), oklch(98% var(--tint-chroma) var(--tint-hue) / 0.88));
+  --ink-2: light-dark(oklch(16% var(--tint-chroma) var(--tint-hue) / 0.62), oklch(98% var(--tint-chroma) var(--tint-hue) / 0.62));
+  --ink-3: light-dark(oklch(16% var(--tint-chroma) var(--tint-hue) / 0.46), oklch(98% var(--tint-chroma) var(--tint-hue) / 0.46));
+  --ink-4: light-dark(oklch(16% var(--tint-chroma) var(--tint-hue) / 0.34), oklch(98% var(--tint-chroma) var(--tint-hue) / 0.34));
+  /* Toolbar icons: solid colors, the same look as ink-1 and a disabled tool on the panel, without transparency. */
+  --color-tool: light-dark(oklch(27% var(--tint-chroma) var(--tint-hue)), oklch(89% var(--tint-chroma) var(--tint-hue)));
+  --color-tool-disabled: light-dark(oklch(72% var(--tint-chroma) var(--tint-hue)), oklch(48% var(--tint-chroma) var(--tint-hue)));
+  --color-gray-1: var(--ink-1);
+  --color-gray-2: var(--ink-2);
+  --color-gray-3: var(--ink-3);
+  --color-ghost-hover: light-dark(oklch(16% var(--tint-chroma) var(--tint-hue) / 0.06), oklch(98% var(--tint-chroma) var(--tint-hue) / 0.08));
+
+  /* Accent. */
+  --color-blue: oklch(61% 0.16 252);
+  --color-accent: var(--color-blue);
+  --color-focus: light-dark(oklch(72% 0.13 252), oklch(62% 0.15 252));
+  --color-selection: light-dark(oklch(78% 0.11 252 / 0.5), oklch(68% 0.12 252 / 0.5));
+
+  /* Controls: fields, segmented controls, sliders. A field is a raised surface with a hairline
+     edge and one soft shadow; the pressed item of a segmented control is raised the same way. */
+  --color-control-icon: var(--ink-4);
+  --color-toggle: light-dark(oklch(16% var(--tint-chroma) var(--tint-hue) / 0.05), oklch(98% var(--tint-chroma) var(--tint-hue) / 0.05));
+  --color-toggle-pressed: light-dark(oklch(98.9% var(--tint-chroma) var(--tint-hue)), oklch(98% var(--tint-chroma) var(--tint-hue) / 0.07));
+  --color-slider-range: light-dark(oklch(16% var(--tint-chroma) var(--tint-hue) / 0.07), oklch(98% var(--tint-chroma) var(--tint-hue) / 0.1));
+  --color-slider-track: light-dark(oklch(16% var(--tint-chroma) var(--tint-hue) / 0.17), oklch(98% var(--tint-chroma) var(--tint-hue) / 0.24));
+  --color-hairline: light-dark(oklch(16% var(--tint-chroma) var(--tint-hue) / 0.07), oklch(98% var(--tint-chroma) var(--tint-hue) / 0.06));
+  --shadow-control: 0 0 0 0.5px var(--color-hairline), 0 1px 2px light-dark(oklch(16% var(--tint-chroma) var(--tint-hue) / 0.07), oklch(0% 0 0 / 0.35));
+  --shadow-toggle: 0 0 0 0.5px var(--color-hairline), 0 1px 2px light-dark(oklch(16% var(--tint-chroma) var(--tint-hue) / 0.08), oklch(0% 0 0 / 0.4));
+  --color-thumb: oklch(98% var(--tint-chroma) var(--tint-hue));
+  --shadow-thumb: 0 0 0 0.5px light-dark(oklch(16% var(--tint-chroma) var(--tint-hue) / 0.22), oklch(0% 0 0 / 0.5)), 0 1px 3px light-dark(oklch(16% var(--tint-chroma) var(--tint-hue) / 0.16), oklch(0% 0 0 / 0.45));
+  --shadow-float: 0 0 0 0.5px light-dark(oklch(16% var(--tint-chroma) var(--tint-hue) / 0.16), oklch(0% 0 0 / 0.6)), 0 8px 24px -6px oklch(16% var(--tint-chroma) var(--tint-hue) / 0.22), 0 1px 3px oklch(16% var(--tint-chroma) var(--tint-hue) / 0.08);
+
+  /* Radii. */
+  --radius-4: 4px;
+  --radius-6: 6px;
+  --radius-8: 8px;
+  --radius-control: 6px;
+}
