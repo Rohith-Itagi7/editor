@@ -43,7 +43,7 @@ export function mountAgentCursor(canvas, store) {
     pointers.set(name, made);
     return made;
   }
-  const place = (p) => { const at = toScreen(p.pos); p.element.style.left = `${at.x}px`; p.element.style.top = `${at.y}px`; };
+  const place = (p) => { if (!p.pos) return; const at = toScreen(p.pos); p.element.style.left = `${at.x}px`; p.element.style.top = `${at.y}px`; };
   const set = (p, to) => { p.pos = to; place(p); };
   // Panning or zooming moves the file under the pointers: they follow their places.
   store.subscribe((reason) => { if (reason === "ui") pointers.forEach(place); });

@@ -7,6 +7,7 @@ import { parseColor } from "../core/style-values.js";
 import { writeHtml } from "../features/import-html.js";
 import { makePdf } from "../features/pdf.js";
 import { TOKEN_TYPES, cssName, slug, tokensToCss, typeInfo } from "../core/tokens.js";
+import { repoFetch } from "../features/github.js";
 
 const PICTURE_LIMIT = 1568; // pixels on the longest side of a picture handed to an agent
 const MAX_FOUND = 200;
@@ -58,9 +59,9 @@ const blobToBase64 = async (blob) => toBase64(new Uint8Array(await blob.arrayBuf
  * Everything a tool needs to look at the document, gathered once per open file: finding nodes and pages,
  * measuring what is drawn, and taking pictures of it. `ctx.agent` is whoever's call is running.
  */
-function openContext({ store, canvas, fileId, fileName, user, announce }) {
+function openContext({ store, canvas, fileId, fileName, repo = () => null, user, announce }) {
   const ctx = {
-    store, canvas, fileId, fileName, user,
+    store, canvas, fileId, fileName, repo, user,
     agent: "Agent",
     touched: new Set(), // artboards the running call changed
     tell: (info) => announce({ name: ctx.agent, ...info }),
@@ -171,6 +172,7 @@ function readingTools(ctx) {
       const artboards = ctx.artboardsOn(page);
       return {
         file: { id: ctx.fileId, name: ctx.fileName() },
+        repo: ctx.repo(),
         pages: ctx.pages().map((p) => ({ id: p.id, name: p.label, type: "page", isActive: p.id === store.activePage() })),
         page: { id: page, name: ctx.pageLabel(page) },
         nodeCount: artboards.reduce((total, n) => total + store.subtree(n.id).length, 0),
@@ -442,6 +444,31 @@ function editingTools(ctx) {
   };
 }
 
+// ---------- The connected repo ----------
+const MAX_REPO_PATHS = 300;
+const MAX_REPO_TEXT = 40 * 1024;
+function repoTools(ctx) {
+  let tree = null; // { repo, files }: the file list is fetched once per repo
+  const requireRepo = () => {
+    const repo = ctx.repo();
+    if (!repo) throw new Error("No repo is connected to this file. Connect one in the Theme tab.");
+    return repo;
+  };
+  return {
+    async list_repo_files({ path = "" } = {}) {
+      const repo = requireRepo();
+      if (tree?.repo !== repo) tree = { repo, files: (await repoFetch(repo)).files };
+      const folder = String(path).replace(/^\/+|\/+$/g, "");
+      const files = tree.files.filter((f) => !folder || f.startsWith(`${folder}/`));
+      return { repo, path: folder, files: files.slice(0, MAX_REPO_PATHS), truncated: files.length > MAX_REPO_PATHS };
+    },
+    async read_repo_file({ path }) {
+      const { text, truncated } = await repoFetch(requireRepo(), String(path));
+      return { path, text: text.slice(0, MAX_REPO_TEXT), truncated: truncated || text.length > MAX_REPO_TEXT };
+    },
+  };
+}
+
 // ---------- Tokens ----------
 function tokenTools(ctx) {
   const { store } = ctx;
@@ -611,7 +638,7 @@ function exportTools(ctx) {
 /** The calls an agent can make on the open file. `call(method, args, agent)` runs one; `agent` names who is asking. */
 export function createMcpHandlers(setup) {
   const ctx = openContext(setup);
-  const tools = { ...readingTools(ctx), ...editingTools(ctx), ...tokenTools(ctx), ...commentTools(ctx), ...exportTools(ctx) };
+  const tools = { ...readingTools(ctx), ...editingTools(ctx), ...tokenTools(ctx), ...repoTools(ctx), ...commentTools(ctx), ...exportTools(ctx) };
 
   // One call at a time, so agents working together (the panel's and any over MCP) never mix up changes or announcements.
   let queue = Promise.resolve();

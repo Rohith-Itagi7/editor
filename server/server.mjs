@@ -4,11 +4,12 @@
 //   GET    /api/files        the files, newest first:   [{ id, name, access, updatedAt }]
 //   POST   /api/files        a new file, named "Untitled", "Untitled 2", ...
 //   GET    /api/files/:id    the file, for its owner:   { id, name, access, pages, nodes, updatedAt }
-//   PUT    /api/files/:id    saves any of name, access, pages, tokens, nodes (POST does too, for a beacon)
+//   PUT    /api/files/:id    saves any of name, access, repo, pages, tokens, nodes (POST does too, for a beacon)
 //   DELETE /api/files/:id    removes it, and its images
 //   POST   /api/agent        { messages }: one turn of the agent panel's conversation, the model's { content, stop_reason } (agent.mjs)
 //   POST   /api/files/:id/assets  an image as the raw body: { url: "/assets/:id/:name" }
 //   GET    /api/proxy?url=   a web page for Import URL: scripts stripped, its CSS and fonts routed back here
+//   GET    /api/github?repo=&path=  the connected repo's file list, or one text file (github.mjs; GITHUB_TOKEN for a private one)
 //   POST   /api/files/:id/attachments  the same for a comment: also PDF, text, CSV and ZIP files
 //   GET    /assets/:id/:name an image or attachment (named by its hash, so a link is not guessable)
 //   GET    /api/shared/:id   the file for a visitor: 200 when access is "link", else 403
@@ -17,7 +18,8 @@
 //   GET    /files            the home page: the list of files
 //   GET    /file/:id         the editor on a file;   GET /f/:id   the same, read-only, through /api/shared
 //
-// `access` is "link" (anyone with the link) or "private" (only the owner). Without sign-in the
+// `access` is "link" (anyone with the link) or "private" (only the owner); `repo` is the GitHub repo the file
+// is connected to, "owner/name" or "owner/name@branch", or null. Without sign-in the
 // owner routes are open to whoever can reach the server, so run it only on this machine.
 import http from "node:http";
 import fs from "node:fs/promises";
@@ -30,6 +32,7 @@ import { createMcp } from "./mcp/server.mjs";
 import { ModelError } from "./model.mjs";
 import { costFrom, createCredits } from "./credits.mjs";
 import { MAX_AGENT_BYTES, MAX_MESSAGES, agentTurn } from "./agent.mjs";
+import { REPO, createGithub } from "./github.mjs";
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), ".."); // the repo: the page's files and, by default, the data
 const types = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/javascript", ".css": "text/css", ".json": "application/json", ".svg": "image/svg+xml", ".png": "image/png", ".webp": "image/webp", ".woff2": "font/woff2" };
@@ -110,6 +113,7 @@ async function proxy(req, res) {
 export async function startServer({ port = 4192, dataDir = path.join(root, ".data"), allowedHosts = [], auth: authEnabled = false } = {}) {
   const auth = authEnabled ? await createAuth({ dataDir }) : null;
   const credits = createCredits({ dataDir });
+  const github = createGithub();
   const fileOf = (id) => path.join(dataDir, `${id}.json`);
   const read = async (id) => {
     try {
@@ -210,6 +214,10 @@ export async function startServer({ port = 4192, dataDir = path.join(root, ".dat
       if (typeof patch.name !== "string" || !patch.name.trim() || patch.name.length > 200) return "name must be 1 to 200 characters";
       file.name = patch.name.trim();
     }
+    if (patch.repo !== undefined) {
+      if (patch.repo !== null && !(typeof patch.repo === "string" && REPO.test(patch.repo))) return "repo must be owner/name or owner/name@branch, or null";
+      file.repo = patch.repo;
+    }
     file.updatedAt = Date.now();
   }
 
@@ -253,6 +261,7 @@ export async function startServer({ port = 4192, dataDir = path.join(root, ".dat
     // With sign-in on, everything but a shared file needs an account.
     if (auth && !user && !(kind === "shared" && req.method === "GET")) return send(res, 401, { error: "Sign in first" });
     if (kind === "proxy" && req.method === "GET") return proxy(req, res);
+    if (kind === "github" && req.method === "GET") return github.handle(req, res);
     if (kind === "agent" && req.method === "POST") {
       const { messages } = await body(req);
       if (!Array.isArray(messages) || !messages.length || messages.length > MAX_MESSAGES) return send(res, 400, { error: `messages must be a list of 1 to ${MAX_MESSAGES}` });
@@ -318,13 +327,13 @@ export async function startServer({ port = 4192, dataDir = path.join(root, ".dat
         const bad = applyPatch(live, patch);
         if (bad) return send(res, 400, { error: bad });
         const merged = hub.patch(id, live);
-        return send(res, 200, { id, name: merged.name, access: merged.access, updatedAt: merged.updatedAt });
+        return send(res, 200, { id, name: merged.name, access: merged.access, repo: merged.repo ?? null, updatedAt: merged.updatedAt });
       }
       const next = { id, name: "Untitled", access: "private", pages: [{ id: "page-1", label: "Page 1" }], nodes: [], ...(auth ? { owner: user.id } : {}), ...file };
       const problem = applyPatch(next, patch);
       if (problem) return send(res, 400, { error: problem });
       await write(next);
-      return send(res, 200, { id, name: next.name, access: next.access, updatedAt: next.updatedAt });
+      return send(res, 200, { id, name: next.name, access: next.access, repo: next.repo ?? null, updatedAt: next.updatedAt });
     }
     if (req.method === "DELETE") {
       if (!file) return send(res, 404, { error: "No such file" });

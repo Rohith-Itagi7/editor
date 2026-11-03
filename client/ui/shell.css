@@ -311,6 +311,13 @@ body { font: 12px/16px var(--font-ui); background: var(--canvas); color: var(--i
 .side.left[data-agent] .pages, .side.left[data-agent] .resize-row, .side.left[data-agent] .layers { display: none; }
 .theme { display: flex; flex-direction: column; flex: 1; min-height: 0; padding-bottom: 12px; }
 .theme[hidden] { display: none; }
+.theme-repo { display: flex; gap: 4px; padding: 0 12px 8px; }
+.theme-repo-name { flex: 1; min-width: 0; height: 24px; padding: 0 8px; border: 0; border-radius: var(--radius-6); background: var(--field); color: var(--ink-1); font: 11px/24px ui-monospace, SFMono-Regular, Menlo, monospace; }
+.theme-repo-name:focus { outline: 1px solid var(--color-focus); }
+.theme-repo button { height: 24px; padding: 0 8px; white-space: nowrap; border: 0; border-radius: var(--radius-6); background: var(--field); color: var(--ink-1); font: 500 11px/16px var(--font-ui); cursor: pointer; }
+.theme-repo button[hidden] { display: none; }
+.theme-repo button:disabled { color: var(--ink-3); cursor: default; }
+.theme-import { background: #8b5cf6; color: #fff; }
 .theme-actions { display: flex; gap: 4px; padding: 0 8px 8px; }
 .theme-copy { flex: 1; height: 22px; padding: 0 4px; white-space: nowrap; border: 0; border-radius: var(--radius-6); background: transparent; color: var(--ink-3); font: 500 11px/16px var(--font-ui); cursor: pointer; }
 .theme-copy:hover { background: var(--field); color: var(--ink-1); }

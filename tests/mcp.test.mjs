@@ -45,7 +45,7 @@ test("an agent finds the tools, and the instructions to use them", async () => {
   try {
     const { tools } = await client.listTools();
     const names = tools.map((t) => t.name);
-    for (const name of ["get_basic_info", "get_selection", "get_node_info", "get_tree_summary", "find_nodes", "get_jsx", "get_screenshot", "write_html", "update_styles", "set_text_content", "create_artboard", "duplicate_nodes", "move_nodes", "get_tokens", "create_tokens", "list_comment_threads", "finish_working_on_nodes", "list_resources", "open_file"]) assert.ok(names.includes(name), name);
+    for (const name of ["get_basic_info", "get_selection", "get_node_info", "get_tree_summary", "find_nodes", "get_jsx", "get_screenshot", "write_html", "update_styles", "set_text_content", "create_artboard", "duplicate_nodes", "move_nodes", "get_tokens", "create_tokens", "list_repo_files", "read_repo_file", "list_comment_threads", "finish_working_on_nodes", "list_resources", "open_file"]) assert.ok(names.includes(name), name);
     assert.equal(names.length, TOOLS.length);
     for (const tool of tools) { assert.equal(tool.inputSchema.type, "object"); assert.ok(tool.description.length > 20, tool.name); }
     assert.match(client.getInstructions(), /get_basic_info/);

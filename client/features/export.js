@@ -195,7 +195,10 @@ export async function nodePng(node, scale = 2) {
   Object.assign(clone.style, { position: "static", left: "0", top: "0", margin: "0", transform: node.style.transform ?? "" });
   clone.setAttribute("xmlns", "http://www.w3.org/1999/xhtml");
   const html = new XMLSerializer().serializeToString(clone);
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"><style>${await embeddedFonts()} * { box-sizing: border-box; }</style><foreignObject width="100%" height="100%"><div xmlns="http://www.w3.org/1999/xhtml" style="font-family: system-ui; width:${width}px; height:${height}px">${html}</div></foreignObject></svg>`;
+  // The theme tokens live on the canvas's world element (canvas.js); the picture is drawn apart from it, so they come along.
+  const world = el.closest(".world") ?? el.parentElement;
+  const tokens = [...(world?.style ?? [])].filter((name) => name.startsWith("--")).map((name) => `${name}:${world.style.getPropertyValue(name)}`).join(";");
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"><style>${await embeddedFonts()} * { box-sizing: border-box; }</style><foreignObject width="100%" height="100%"><div xmlns="http://www.w3.org/1999/xhtml" style="font-family: system-ui; width:${width}px; height:${height}px; ${tokens}">${html}</div></foreignObject></svg>`;
   const image = new Image();
   image.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
   await image.decode();

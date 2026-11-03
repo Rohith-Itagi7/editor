@@ -1,21 +1,34 @@
 // The Theme tab of the left panel: the file's tokens as one block of real CSS that can be read, edited and pasted
 // into a project. When the text is left (its `change` event) it is read back and written to the store as one undo
-// step. Text that is not valid CSS stays as typed, with the reason under it, and changes nothing.
+// step. Text that is not valid CSS stays as typed, with the reason under it, and changes nothing. Above it, the
+// GitHub repo the file is connected to: Connect keeps it with the file, Import brings its tokens into the theme and
+// asks an agent for its components (main.js wires both).
 //
 // Tokens are CSS variables of the canvas (canvas.js). A token is identified by its variable name, so editing a value
 // in the text keeps the token, while editing a name is a delete plus an add; the elements that used the old name keep
 // its value (store.js).
-import { cssName, tokensToCss, parseTokensCss } from "../core/tokens.js";
+import { applyTokens, tokensToCss, parseTokensCss } from "../core/tokens.js";
 import { toast } from "../ui/toast.js";
 
 const THEME_TAB = 1; // Design is the first tab, Theme the second (⌥1 and ⌥2 click them)
 
-export function mountTheme(left, store) {
+/** A pasted GitHub address as "owner/name" or "owner/name@branch"; other text as it is. */
+const repoOf = (text) => {
+  const url = /^(?:https?:\/\/)?(?:www\.)?github\.com\/([\w.-]+\/[\w.-]+?)(?:\.git)?(?:\/tree\/([\w./-]+))?\/?$/.exec(text.trim());
+  return url ? `${url[1]}${url[2] ? `@${url[2]}` : ""}` : text.trim();
+};
+
+export function mountTheme(left, store, { repo = null, setRepo, importRepo } = {}) {
   const tabs = [...left.querySelectorAll(".tabs [role=tab]")];
 
   const panel = Object.assign(document.createElement("section"), { className: "theme", hidden: true });
   left.querySelector(".tabs").after(panel);
   panel.innerHTML = `
+    <form class="theme-repo">
+      <input class="theme-repo-name" placeholder="owner/repo" aria-label="GitHub repo" autocomplete="off" spellcheck="false">
+      <button type="submit" class="theme-connect">Connect</button>
+      <button type="button" class="theme-import" title="The repo's tokens into this theme, and its components onto a Components page">Import</button>
+    </form>
     <div class="theme-actions">
       <button type="button" class="theme-copy" data-format="tailwind">Copy as @theme</button>
       <button type="button" class="theme-copy" data-format="css">Copy as :root</button>
@@ -26,24 +39,58 @@ export function mountTheme(left, store) {
   const problem = panel.querySelector(".theme-error");
   code.readOnly = store.readOnly;
 
+  // ---------- The connected repo ----------
+  // The field is the one place on the page that holds the repo; the server keeps it with the file, like its name.
+  const repoForm = panel.querySelector(".theme-repo");
+  const field = repoForm.querySelector(".theme-repo-name");
+  const connect = repoForm.querySelector(".theme-connect");
+  const importButton = repoForm.querySelector(".theme-import");
+  field.readOnly = store.readOnly || !setRepo;
+  connect.hidden = store.readOnly || !setRepo;
+
+  function showRepo(value) {
+    if (document.activeElement !== field || value === field.value) field.value = value ?? "";
+    importButton.hidden = store.readOnly || !importRepo || !field.value;
+  }
+  showRepo(repo);
+
+  repoForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const previous = repo;
+    repo = repoOf(field.value) || null;
+    field.value = repo ?? "";
+    field.blur();
+    try {
+      await setRepo(repo);
+      showRepo(repo);
+      if (repo) toast(`Connected to ${repo}`);
+    } catch (error) {
+      repo = previous;
+      showRepo(repo);
+      toast(error.message || "Could not connect the repo");
+    }
+  });
+  field.addEventListener("input", () => { importButton.hidden = true; });
+  field.addEventListener("keydown", (event) => event.stopPropagation());
+
+  importButton.addEventListener("click", async () => {
+    importButton.disabled = true;
+    importButton.textContent = "Importing…";
+    try {
+      await importRepo(field.value);
+    } catch (error) {
+      toast(error.message || "Could not import from the repo");
+    } finally {
+      importButton.disabled = false;
+      importButton.textContent = "Import";
+    }
+  });
+
   // The text shows what the store holds.
   function showTokens() {
     const css = tokensToCss(store.tokens());
     if (code.value !== css) code.value = css;
     problem.hidden = true;
-  }
-
-  /** What the text asks for, compared with the store: tokens to delete, to change, and to add. */
-  function planChanges(wanted) {
-    const wantedByName = new Map(wanted.map((token) => [cssName(token), token]));
-    const existing = store.tokens();
-    const known = new Set(existing.map(cssName));
-    return {
-      remove: existing.filter((token) => !wantedByName.has(cssName(token))),
-      update: existing.filter((token) => wantedByName.has(cssName(token)) && wantedByName.get(cssName(token)).value !== token.value)
-        .map((token) => ({ id: token.id, value: wantedByName.get(cssName(token)).value })),
-      add: [...wantedByName].filter(([name]) => !known.has(name)).map(([, token]) => token),
-    };
   }
 
   function commitText() {
@@ -53,14 +100,7 @@ export function mountTheme(left, store) {
       problem.textContent = parsed.error;
       return;
     }
-    const { remove, update, add } = planChanges(parsed.tokens);
-    if (remove.length || update.length || add.length) {
-      store.transact("Edit theme", () => {
-        if (remove.length) store.deleteTokens(remove.map((token) => token.id));
-        for (const { id, value } of update) store.updateToken(id, { value });
-        for (const { type, name, value } of add) store.updateToken(store.createToken(type), { name, value });
-      });
-    }
+    applyTokens(store, parsed.tokens);
     showTokens();
   }
 
@@ -92,4 +132,6 @@ export function mountTheme(left, store) {
     // or it is waiting to be fixed.
     if (document.activeElement !== code && problem.hidden) showTokens();
   });
+
+  return { repo: () => field.value || null, showRepo };
 }

@@ -43,13 +43,23 @@ test("a file keeps what is saved to it, and says so in the list", async () => {
 
 test("bad patches are refused with a reason", async () => {
   const { body: file } = await call("/api/files", { method: "POST" });
-  for (const patch of [{ pages: [] }, { name: "  " }, { access: "everyone" }, { nodes: "x" }, { tokens: [{ id: 1 }] }]) {
+  for (const patch of [{ pages: [] }, { name: "  " }, { access: "everyone" }, { nodes: "x" }, { tokens: [{ id: 1 }] }, { repo: "nope" }, { repo: 3 }]) {
     const answer = await call(`/api/files/${file.id}`, json("PUT", patch));
     assert.equal(answer.status, 400, JSON.stringify(patch));
     assert.ok(answer.body.error);
   }
   assert.equal((await call(`/api/files/${file.id}`, { method: "PUT", body: "not json" })).status, 400);
   assert.equal((await call("/api/files/..%2Fetc")).status, 400);
+});
+
+test("a file keeps the repo it is connected to, and null disconnects it", async () => {
+  const { body: file } = await call("/api/files", { method: "POST" });
+  assert.equal((await call(`/api/files/${file.id}`, json("PUT", { repo: "shadcn-ui/ui@main" }))).body.repo, "shadcn-ui/ui@main");
+  assert.equal((await call(`/api/files/${file.id}`)).body.repo, "shadcn-ui/ui@main");
+  await call(`/api/files/${file.id}`, json("PUT", { access: "link" }));
+  assert.equal((await call(`/api/shared/${file.id}`)).body.repo, "shadcn-ui/ui@main");
+  assert.equal((await call(`/api/files/${file.id}`, json("PUT", { repo: null }))).body.repo, null);
+  assert.equal((await call("/api/github?repo=bad")).status, 400);
 });
 
 test("a visitor reads a file only when its access is link", async () => {

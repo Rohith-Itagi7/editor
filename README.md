@@ -21,7 +21,7 @@ npm test                # the server, the store, sync, sign-in, saved files
 
 It needs the internet once per page load, for the fonts from Google Fonts. Settings come from
 the environment: `EDITOR_AUTH=1` turns sign-in on, `EDITOR_DATA` moves the data folder,
-`ANTHROPIC_API_KEY` lets the agent panel work.
+`ANTHROPIC_API_KEY` lets the agent panel work, `GITHUB_TOKEN` lets a file connect to a private repo.
 `node serve.mjs` reads them from `.env.local` next to it (kept out of git), one `NAME=value` a line, as well as from the environment.
 
 ## What it does
@@ -66,6 +66,7 @@ Putting it on a network needs `EDITOR_AUTH=1` and `startServer({ allowedHosts })
 | `POST /api/agent` | One turn of the agent panel's conversation, `{ messages }`; answers the model's `{ content, stop_reason }` |
 | `GET /api/shared/:id` | The file for a visitor: 200 when `access` is `link`, else 403 |
 | `GET /api/proxy?url=` | A web page for Import URL, scripts stripped |
+| `GET /api/github?repo=&path=` | The connected GitHub repo's file list, or one text file (`GITHUB_TOKEN` for a private one) |
 | `/api/auth/me`, `signup`, `signin`, `signout` | Accounts, when sign-in is on |
 | `WS /sync/:id` | Live sync of an open file (`server/sync.mjs`) |
 | `POST /mcp` | Agents over MCP (Streamable HTTP), see below |
@@ -90,6 +91,18 @@ everyone else with the file open as it happens. Layers an agent is working on ar
 - **Port.** The dev server is on 4192, not 4190: fetch treats 4190 as a blocked port, so an agent's HTTP client refuses it.
 - **Limits.** Export is raster (a PNG, JPEG or WebP; the PDF holds pictures); `get_fill_image` reads CSS
   background images; fonts are checked by measuring, not by a font service.
+
+## Connect a GitHub repo
+
+![A file connected to a GitHub repo: its tokens come into the theme, three agents build its components, and a screen is made from them](https://raw.githubusercontent.com/michael-jordan-coder/editor/media/agent-github.gif)
+
+A file can be connected to one repo (Theme tab ▸ `owner/repo` ▸ Connect; a GitHub address works too). Import then takes
+from the repo only what a design needs: its CSS variables become the file's tokens in the Theme tab (shadcn's `--primary:
+222 47% 11%` included), and three agents read `components/ui` and build a "Components" page, one artboard per component
+with its variants and states as plain HTML on those tokens. From then on, any agent asked for a screen duplicates from that
+page. Shown here at up to 8x; the whole thing took four minutes. [Full video](https://github.com/michael-jordan-coder/editor/blob/media/agent-github.mp4).
+A public repo needs nothing; a private one needs `GITHUB_TOKEN` in `.env.local`, which never leaves the server. Agents over MCP
+get the same two tools, `list_repo_files` and `read_repo_file`, and `get_basic_info` names the repo.
 
 ## Files
 

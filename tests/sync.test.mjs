@@ -115,8 +115,10 @@ test("edits are checked, and a plain save while the file is open reaches the edi
     a.send({ t: "ops", ops: [{ op: "drop", id: "1" }] });
     assert.match((await a.next("error")).error, /not valid/);
 
-    await fetch(new URL(`/api/files/${id}`, url), { method: "PUT", body: JSON.stringify({ name: "Renamed", nodes: [el("1"), el("4")] }) });
-    assert.equal((await b.next("meta")).name, "Renamed");
+    await fetch(new URL(`/api/files/${id}`, url), { method: "PUT", body: JSON.stringify({ name: "Renamed", repo: "o/n", nodes: [el("1"), el("4")] }) });
+    const meta = await b.next("meta");
+    assert.equal(meta.name, "Renamed");
+    assert.equal(meta.repo, "o/n");
     assert.deepEqual((await b.next("ops")).ops.map((o) => o.id), ["4"]);
     assert.equal((await (await fetch(new URL(`/api/files/${id}`, url))).json()).nodes.length, 2);
     a.close(); b.close();

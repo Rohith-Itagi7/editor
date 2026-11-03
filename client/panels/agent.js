@@ -156,8 +156,10 @@ export function mountAgent({ left, run }) {
         said = content.filter((b) => b.type === "text").map((b) => b.text).join("\n");
         for (const block of content) if (block.type === "text" && block.text.trim()) line(agent, "reply", escape(block.text.trim()));
         const calls = content.filter((b) => b.type === "tool_use");
-        if (stop_reason !== "tool_use" || !calls.length) return said;
-        const results = [];
+        // A reply cut at the length limit still has whole tool calls in it: those run, and the model is told to go on in smaller steps.
+        const cut = stop_reason === "max_tokens";
+        if (!cut && (stop_reason !== "tool_use" || !calls.length)) return said;
+        const results = cut ? [{ type: "text", text: "Your answer was cut at the length limit. Go on from here, with at most two tool calls in a reply." }] : [];
         for (const call of calls) {
           if (controller.signal.aborted) throw new DOMException("Stopped", "AbortError");
           const step = line(agent, "step", escape(call.name.replace(/_/g, " ")));
@@ -169,7 +171,8 @@ export function mountAgent({ left, run }) {
             results.push({ type: "tool_result", tool_use_id: call.id, is_error: true, content: [{ type: "text", text: error.message }] });
           }
         }
-        messages.push({ role: "user", content: results });
+        // Results come first: the API wants them right after the calls they answer.
+        messages.push({ role: "user", content: cut ? [...results.slice(1), results[0]] : results });
       }
       line(agent, "reply", "I stopped here after many steps. Tell me to go on if there is more to do.");
       return said;
@@ -241,4 +244,14 @@ Work ONLY inside your own frame: never edit the artboard or the other parts, the
   });
 
   show(add_());
+
+  /** A request from elsewhere in the editor (Import from a repo): it goes to the agent in front, or a new one if that one is busy, and the tab shows it. */
+  return {
+    ask(text, shown) {
+      const agent = active.working ? add_() : active;
+      show(agent);
+      tab.click();
+      return work(agent, text, shown);
+    },
+  };
 }

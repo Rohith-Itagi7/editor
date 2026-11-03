@@ -15,7 +15,7 @@ test("a file saved to the disk opens again as a new file, with everything in it"
     const target = path.join(dataDir, "out.json");
     assert.deepEqual(await exportFile(url, id, target), { name: "Study" });
     const saved = JSON.parse(await fs.readFile(target, "utf8"));
-    assert.deepEqual(Object.keys(saved).sort(), ["name", "nodes", "pages", "threads", "tokens"]);
+    assert.deepEqual(Object.keys(saved).sort(), ["name", "nodes", "pages", "repo", "threads", "tokens"]);
 
     const again = await importFile(url, target);
     assert.notEqual(again, id);

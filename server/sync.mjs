@@ -6,7 +6,7 @@
 //   page  -> server   { t: "ops", ops }  { t: "presence", page, x, y, selection }  { t: "focus" }
 //   server -> page    { t: "hello", you, role, rev, file, peers }   { t: "ops", ops, from, rev }   { t: "ack", rev }
 //                     { t: "presence", id, name, color, userId, page, x, y, selection }   { t: "leave", id }
-//                     { t: "meta", name, access }   { t: "error", error }
+//                     { t: "meta", name, access, repo }   { t: "error", error }
 //   agents (server/mcp/server.mjs): server -> page { t: "call", id, method, args, agent } and { t: "open", fileId };
 //                     page -> server { t: "result", id, value | error } and { t: "agent", name, nodeIds, working },
 //                     which the others are told of as { t: "agent", from, name, nodeIds, working }
@@ -127,10 +127,10 @@ export function createHub({ read, write, hostAllowed, auth, validate }) {
     client.name = user?.name ?? `Guest ${room.clients.size + 1}`;
     room.clients.add(client);
 
-    const { name, access, pages, tokens, threads, nodes } = room.file;
+    const { name, access, repo = null, pages, tokens, threads, nodes } = room.file;
     const peers = [...room.clients].filter((c) => c !== client && c.presence)
       .map((c) => ({ id: c.id, name: c.name, color: c.color, ...c.presence, userId: c.user?.id ?? null }));
-    tell(client, { t: "hello", you: { id: client.id, name: client.name, color: client.color, userId: user?.id ?? null }, role, rev: room.rev, file: { name, access, pages, tokens, threads, nodes }, peers });
+    tell(client, { t: "hello", you: { id: client.id, name: client.name, color: client.color, userId: user?.id ?? null }, role, rev: room.rev, file: { name, access, repo, pages, tokens, threads, nodes }, peers });
 
     ws.on("message", (raw) => {
       let message;
@@ -248,9 +248,9 @@ export function createHub({ read, write, hostAllowed, auth, validate }) {
       const { file } = room;
       const ops = diff(stateOf(file), stateOf({ pages: file.pages, tokens: file.tokens, threads: file.threads, nodes: file.nodes, ...next }));
       if (ops.length) change(room, ops, null);
-      if (next.name !== file.name || next.access !== file.access) {
-        Object.assign(file, { name: next.name ?? file.name, access: next.access ?? file.access });
-        tellAll(room, { t: "meta", name: file.name, access: file.access });
+      if (next.name !== file.name || next.access !== file.access || next.repo !== file.repo) {
+        Object.assign(file, { name: next.name ?? file.name, access: next.access ?? file.access, repo: next.repo === undefined ? file.repo : next.repo });
+        tellAll(room, { t: "meta", name: file.name, access: file.access, repo: file.repo ?? null });
         saveSoon(room);
       }
       return file;

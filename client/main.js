@@ -18,6 +18,7 @@ import { createMcpHandlers } from "./collab/agent-calls.js";
 import { mountTheme } from "./panels/theme.js";
 import { toast } from "./ui/toast.js";
 import { tokenHost } from "./core/tokens.js";
+import { COMPONENTS, componentsPage, componentsPrompt, importRepoTokens } from "./features/github.js";
 
 // The file lives on the server (server/server.mjs): /file/:id is the owner's, /f/:id a visitor's, read-only.
 const FILE_ID = location.pathname.match(/^\/file\/([\w-]+)/)?.[1];
@@ -134,7 +135,25 @@ const user = account.user ?? loadGuest();
 
 // The people a comment can mention: those with the file open now, and those who have commented on it.
 mountComments({ store, canvas: canvasEl, fileId: ID_OF_FILE, user, people: () => (sync?.peers() ?? []).map((p) => ({ id: p.userId ?? p.name, name: p.name })) });
-mountTheme(leftPanel, store);
+// The Theme tab also holds the GitHub repo the file is connected to; Import brings its tokens here, then asks an agent for its components.
+let agentPanel = null;
+const theme = mountTheme(leftPanel, store, {
+  repo: file.repo ?? null,
+  setRepo: (repo) => put({ ...content(), repo }),
+  importRepo: async (repo) => {
+    const { added, updated, dropped } = await importRepoTokens(store, repo);
+    const skipped = dropped.length ? `, ${dropped.length} skipped (${dropped.slice(0, 3).map((d) => d.name).join(", ")}${dropped.length > 3 ? "…" : ""})` : "";
+    toast(`${added} tokens added, ${updated} updated${skipped}`);
+    // Three agents share the components, each a column of the Components page.
+    if (!agentPanel) return;
+    const pageId = componentsPage(store);
+    const per = Math.ceil(COMPONENTS.length / 3);
+    await Promise.all([0, 1, 2].map((i) => {
+      const names = COMPONENTS.slice(i * per, (i + 1) * per);
+      return agentPanel.ask(componentsPrompt(repo, pageId, names, i * 1040), `Import components from ${repo}: ${names.join(", ")}`);
+    }));
+  },
+});
 
 // ---------- The file's name and the way back ----------
 const fileName = editor.querySelector(".file-name");
@@ -197,9 +216,10 @@ sync = mountSync({
   identity: account.user ? null : user, store, canvas: canvasEl, fileId: ID_OF_FILE, shared: Boolean(SHARED_ID),
   // An agent over MCP (server/mcp/server.mjs) works on this page's own store, so what it does saves and syncs like anything typed.
   agentCalls: FILE_ID
-    ? (announce) => createMcpHandlers({ store, canvas: canvasEl, fileId: FILE_ID, fileName: () => fileName.textContent, user, announce: (info) => { announce(info); agentCursor.follow(info); } })
+    ? (announce) => createMcpHandlers({ store, canvas: canvasEl, fileId: FILE_ID, fileName: () => fileName.textContent, repo: theme.repo, user, announce: (info) => { announce(info); agentCursor.follow(info); } })
     : undefined,
-  onMeta: ({ name }) => {
+  onMeta: ({ name, repo }) => {
+    theme.showRepo(repo ?? null);
     if (!name) return;
     fileName.textContent = name;
     document.title = name;
@@ -208,7 +228,7 @@ sync = mountSync({
 
 // The agent panel runs the editor's tools through the sync, the way an agent over MCP does, each agent under its own name.
 if (FILE_ID) {
-  mountAgent({
+  agentPanel = mountAgent({
     left: leftPanel,
     run: async (method, args, agent) => {
       await agentCursor.aim(agent, args);

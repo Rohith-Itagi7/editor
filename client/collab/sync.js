@@ -86,7 +86,7 @@ export function mountSync({ store, canvas, fileId, shared, onMeta, identity, age
     if (JSON.stringify(merged) !== JSON.stringify({ nodes: store.state().nodes, pages: store.state().pages, tokens: store.state().tokens, threads: store.state().threads })) store.replaceState(merged);
     synced = clone(server);
     if (pending.length && role === "edit") { tell({ t: "ops", ops: pending }); synced = clone(store.state()); }
-    onMeta?.({ name: message.file.name, access: message.file.access });
+    onMeta?.({ name: message.file.name, access: message.file.access, repo: message.file.repo ?? null });
     if (avatar) { avatar.textContent = (you.name?.[0] ?? "?").toUpperCase(); avatar.style.background = you.color; avatar.title = `${you.name} (you)`; }
     peers.clear();
     for (const peer of message.peers) peers.set(peer.id, peer);
@@ -129,7 +129,7 @@ export function mountSync({ store, canvas, fileId, shared, onMeta, identity, age
       store.applyRemote(message.ops);
     } else if (message.t === "presence") { peers.set(message.id, message); paintPeers(); }
     else if (message.t === "leave") { peers.delete(message.id); paintPeers(); }
-    else if (message.t === "meta") onMeta?.({ name: message.name, access: message.access });
+    else if (message.t === "meta") onMeta?.({ name: message.name, access: message.access, repo: message.repo ?? null });
     else if (message.t === "error") toast(message.error);
   }
 

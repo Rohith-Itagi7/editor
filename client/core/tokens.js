@@ -52,6 +52,36 @@ export function tokensToCss(tokens, format = "tailwind") {
 /** The tokens as a { --name: value } map, for element.style.setProperty. */
 export const tokenVariables = (tokens) => Object.fromEntries(tokens.map((token) => [cssName(token), valueOf(token)]));
 
+// ---------- Merging ----------
+/**
+ * What a wanted list of { type, name, value } means against the existing tokens, matched by variable name: tokens
+ * to remove (none when `replace` is off), to change, and to add. A renamed variable is a remove plus an add.
+ */
+export function planTokenChanges(existing, wanted, { replace = true } = {}) {
+  const wantedByName = new Map(wanted.map((token) => [cssName(token), token]));
+  const known = new Set(existing.map(cssName));
+  return {
+    remove: replace ? existing.filter((token) => !wantedByName.has(cssName(token))) : [],
+    update: existing.filter((token) => wantedByName.has(cssName(token)) && wantedByName.get(cssName(token)).value !== token.value)
+      .map((token) => ({ id: token.id, value: wantedByName.get(cssName(token)).value })),
+    add: [...wantedByName].filter(([name]) => !known.has(name)).map(([, token]) => token),
+  };
+}
+
+/** Writes the plan for `wanted` to the store as one undo step, and answers the plan. */
+export function applyTokens(store, wanted, { label = "Edit theme", replace = true } = {}) {
+  const plan = planTokenChanges(store.tokens(), wanted, { replace });
+  const { remove, update, add } = plan;
+  if (remove.length || update.length || add.length) {
+    store.transact(label, () => {
+      if (remove.length) store.deleteTokens(remove.map((token) => token.id));
+      for (const { id, value } of update) store.updateToken(id, { value });
+      for (const { type, name, value } of add) store.updateToken(store.createToken(type), { name, value });
+    });
+  }
+  return plan;
+}
+
 // ---------- Ordering ----------
 /**
  * The tokens with those in `ids` moved within their own kind: "up" or "down" one place, or to the "top" or the
