@@ -4,6 +4,11 @@ A design editor in the browser and as a Mac app: a canvas of real HTML elements,
 theme tokens, comments, live sync between people, and agents (Claude Code, Codex, any MCP client) that
 work in the file you have open. You can paste HTML or import a web page, and play a frame as its own page.
 
+![Five agents build one page at the same time in the editor](https://raw.githubusercontent.com/michael-jordan-coder/editor/media/agent-team.gif)
+
+One request, five agents: the first plans the page and splits it, then all five build their parts in the open file at the same
+time, each with its own pointer. About a minute and a half, shown here at up to 8x. [Full video](https://github.com/michael-jordan-coder/editor/blob/media/agent-team.mp4).
+
 ## Run
 
 ```bash
