@@ -5,7 +5,7 @@ comments, live sync, and agents that work in the open file over MCP. Plain ES mo
 `node serve.mjs` serves it at http://127.0.0.1:4192/ (not 4190: fetch refuses that port, and agents use fetch),
 `npm start` runs it in Electron, `npm test` runs the tests, `npm run package` builds the app for this machine and `npm run package:all` for Mac, Windows and Linux
 (`desktop/package.mjs`).
-The README says what it does and lists the routes.
+The README says what it does; the header comment of `server/server.mjs` lists the routes.
 
 ## Layout
 
@@ -41,7 +41,7 @@ imports the page. A new folder needs a line in `RULES`. The server serves only `
 - **An MCP tool**: its name, schema and description in `server/mcp/tools.mjs` (`where: "page"` or `"server"`);
   a page tool's handler in `client/collab/agent-calls.js`; a server tool in `serverTool` in `server/mcp/server.mjs`.
   `tests/mcp.test.mjs` pins the list. Handlers edit through the store, so each is one undo step and syncs.
-- **A server route**: `server/server.mjs`, with its line in the header comment and the README table.
+- **A server route**: `server/server.mjs`, with its line in the header comment.
 - **A change to what travels between clients**: `shared/ops.js`, and its test in `tests/sync-ops.test.mjs`.
 
 ## Rules that are easy to break
